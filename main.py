@@ -7,6 +7,8 @@ from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 import requests
 import html2text
@@ -34,43 +36,30 @@ def get_vector_store(text_chunks):
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
-def get_conversational_chain():
+def get_response(question):
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+
+    new_db = FAISS.load_local("faiss_index", embeddings,allow_dangerous_deserialization=True)
+    docs = new_db.similarity_search(question)
+
     prompt_template = """
     You will be provided your resume. Act as a person which has below resume and 
     Answer the question as detailed as possible from the provided context.
     If user is greeting you please greet them with respect.\n\n
-    Context:\n {context}?\n
+    Context:\n {docs}?\n
     Question: \n{question}\n
 
     Answer:
     """
 
-    model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3,disable_streaming=False)
+    prompt=ChatPromptTemplate.from_template(prompt_template)
+    chain= prompt | llm | StrOutputParser()
 
-    prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
-    return chain
-
-def user_input(user_question):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-
-    new_db = FAISS.load_local("faiss_index", embeddings,allow_dangerous_deserialization=True)
-    docs = new_db.similarity_search(user_question)
-
-    chain = get_conversational_chain()
-
-    response = chain(
-        {"input_documents": docs, "question": user_question},
-        return_only_outputs=True)
-
-    return response["output_text"]
-
-# Streamed response emulator
-def response_generator(user_question):
-    response = user_input(user_question)
-    for word in response.split():
-        yield word + " "
+    return chain.stream({
+        "question":question,
+        "docs":docs
+    })
 
 st.set_page_config(page_title="Ganesh Thorat", page_icon=r"logo.png", layout="centered", initial_sidebar_state="auto", menu_items=None)
 st.header(":violet[ChatBot] -  :blue[GenAI based] :orange[Resume]",divider='rainbow', help = "This bot is designed by Ganesh Thorat to address all of your questions about me")
@@ -90,7 +79,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 
-if prompt := st.chat_input("Ask about me"):
+if prompt := st.chat_input("Ask about me (eg. Tell me about yourself)"):
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
     # Display user message in chat message container
@@ -99,6 +88,6 @@ if prompt := st.chat_input("Ask about me"):
 
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
-        response = st.write_stream(response_generator(prompt))
+        response = st.write_stream(get_response(prompt))
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
