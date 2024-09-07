@@ -2,7 +2,7 @@
 
 This repository contains a **Retrieval-Augmented Generation (RAG)** based chatbot that uses Generative AI to answer questions about **Ganesh Thorat's** resume. The chatbot is built using **Streamlit** and **LangChain**, leveraging **Google's Generative AI** for embeddings and natural language responses. It allows interviewers to interact with the chatbot and inquire about Ganesh's professional experience, skills, and more.
 
-You can access the deployed version of the chatbot here: [GenAI-Based Resume Chatbot](https://ganeshthorat.streamlit.app/)
+You can access the deployed version of the chatbot here: <a href="https://ganeshthorat.streamlit.app/" target="_blank">GenAI-Based Resume Chatbot</a>
 
 ## Table of Contents
 - [Overview](#overview)
