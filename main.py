@@ -42,9 +42,11 @@ def get_response(question):
     new_db = FAISS.load_local("faiss_index", embeddings,allow_dangerous_deserialization=True)
     docs = new_db.similarity_search(question)
 
+
     prompt_template = """
-    You will be provided your resume. Act as a person which has below resume and 
-    Answer the question as detailed as possible from the provided context.
+    You will be provided your resume. You are professional AI developer and your details are provided in resume.
+    Recruiter will ask you questions.
+    Answer the question as detailed as possible.
     If user is greeting you please greet them with respect.\n\n
     Context:\n {docs}?\n
     Question: \n{question}\n
@@ -52,7 +54,7 @@ def get_response(question):
     Answer:
     """
 
-    llm = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3,disable_streaming=False)
+    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3,disable_streaming=False)
     prompt=ChatPromptTemplate.from_template(prompt_template)
     chain= prompt | llm | StrOutputParser()
 
