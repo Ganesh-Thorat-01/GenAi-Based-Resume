@@ -1,12 +1,10 @@
 import streamlit as st
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains.question_answering import load_qa_chain
-from langchain.prompts import PromptTemplate
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
@@ -19,6 +17,8 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 # Set path to your PDF file
 PDF_PATH=os.getenv("PDF_PATH")
+EMBEDDING_MODEL = "models/gemini-embedding-001"
+CHAT_MODEL = "gemini-2.5-flash-lite"
 
 def get_pdf_text(pdf_path):
     response = requests.get(pdf_path)
@@ -32,12 +32,12 @@ def get_text_chunks(text):
     return chunks
 
 def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     vector_store.save_local("faiss_index")
 
 def get_response(question):
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    embeddings = GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
 
     new_db = FAISS.load_local("faiss_index", embeddings,allow_dangerous_deserialization=True)
     docs = new_db.similarity_search(question)
@@ -54,7 +54,7 @@ def get_response(question):
     Answer:
     """
 
-    llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3,disable_streaming=False)
+    llm = ChatGoogleGenerativeAI(model=CHAT_MODEL, temperature=0.3,disable_streaming=False)
     prompt=ChatPromptTemplate.from_template(prompt_template)
     chain= prompt | llm | StrOutputParser()
 
